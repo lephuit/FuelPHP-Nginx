@@ -1,0 +1,71 @@
+server {
+	listen 57;
+	
+	server_name localhost;
+	
+	############################
+	# The folder root is important to change
+	# don't just put the root as your project root
+	# but give the public folder as your project root
+	# The routing in FuelPHP is classic, 
+	# so, every output in the browser should be via the public folder
+	##################################
+	root /var/www/fuelphp/public; 
+	
+	index index.php index.html index.htm;
+
+	access_log /var/log/nginx/fuel_access.log;
+	error_log /var/log/nginx/fuel_error.log;
+	
+	client_max_body_size 25M; 
+	default_type text/html;
+	charset utf-8;
+	 
+	location / {
+		try_files $uri $uri/ @fuel;
+		expires 30d;
+	}
+	 
+	location @fuel {
+		rewrite ^ /index.php?/$request_uri;
+	}
+	 
+	location ~ \.php$ {
+		include fastcgi_params;
+		fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+		fastcgi_param SCRIPT_NAME $script;
+		fastcgi_param PATH_INFO $path_info;
+		fastcgi_pass unix:/tmp/php5-fpm.sock;
+	}
+	
+	location ~* ^/(modules|application|system) {
+		return 403;
+	}
+	 
+	error_page 404	/index.php;
+	 
+	# deny access to .htaccess files, if Apache's document root
+	# concurs with nginx's one
+	#
+	location ~ /\.ht {
+		deny all;
+	}
+	
+	## Static file handling.
+        location ~* .+\.(?:css|gif|htc|js|jpe?g|png|swf)$ {
+            expires max;
+            ## No need to bleed constant updates. Send the all shebang in one
+            ## fell swoop.
+            tcp_nodelay off;
+            ## Set the OS file cache.
+            open_file_cache max=100 inactive=120s;
+            open_file_cache_valid 45s;
+            open_file_cache_min_uses 2;
+            open_file_cache_errors off;
+        }
+	
+	location = /favicon.ico {
+        try_files /favicon.ico =204;
+    }
+
+}
